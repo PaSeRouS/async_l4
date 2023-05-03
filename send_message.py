@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from argparse import ArgumentParser
 
@@ -17,8 +18,19 @@ async def send_message(host, port, token):
     log.debug(await reader.readline())
     writer.write(f"{token}\n".encode())
     await writer.drain()
+    log.debug(f"Отправлен токен: {token.strip()}")
+    
+    auth_result = json.loads((await reader.readline()).decode())
+    log.debug(f"Сообщение: {auth_result}")
 
-    log.debug(await reader.readline())
+    if auth_result is None:
+        writer.close()
+        await writer.wait_closed()
+        log.debug("Неизвестный токен. Проверьте его или зарегистрируйте заново.")
+        return
+    else:
+        log.debug(f"Logged in as {auth_result['nickname']}")
+        
     message = 'Я снова тестирую чатик. Это третье сообщение.'
     
     if not message:
@@ -29,7 +41,7 @@ async def send_message(host, port, token):
 
     writer.write(message.encode())
     await writer.drain()
-    log.debug(f'Отправлено сообщение: {message}')
+    log.debug(f'Отправлено сообщение: {message.strip()}')
     writer.close()
     await writer.wait_closed()
     
