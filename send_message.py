@@ -1,7 +1,11 @@
 import asyncio
+import logging
 from argparse import ArgumentParser
 
 from environs import Env
+
+
+log = logging.getLogger(__file__)
 
 
 async def send_message(host, port, token):
@@ -10,9 +14,11 @@ async def send_message(host, port, token):
         port
     )
 
+    log.debug(await reader.readline())
     writer.write(f"{token}\n".encode())
     await writer.drain()
 
+    log.debug(await reader.readline())
     message = 'Я снова тестирую чатик. Это третье сообщение.'
     
     if not message:
@@ -23,12 +29,15 @@ async def send_message(host, port, token):
 
     writer.write(message.encode())
     await writer.drain()
+    log.debug(f'Отправлено сообщение: {message}')
     writer.close()
     await writer.wait_closed()
     
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
+
     parser = ArgumentParser()
     parser.add_argument('--host', help='Адрес чат-сервера')
     parser.add_argument('--port', help='Порт чат-сервера для отправки сообщения')
