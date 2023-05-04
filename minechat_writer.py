@@ -42,7 +42,7 @@ async def register(host, port, username):
     return writer
 
 
-async def authorize(host, port, token):
+async def authorise(host, port, token):
     reader, writer = await asyncio.open_connection(
         host,
         port
@@ -66,6 +66,14 @@ async def authorize(host, port, token):
         
     message = 'Я снова тестирую чатик. Это третье сообщение.'
     
+    await submit_message(writer, message)
+    writer.close()
+    await writer.wait_closed()
+
+
+async def submit_message(writer, message):
+    message = 'Я снова тестирую чатик. Это третье сообщение.'
+    
     if not message:
         message = '\n'
     else:
@@ -74,10 +82,7 @@ async def authorize(host, port, token):
 
     writer.write(message.encode())
     await writer.drain()
-    log.debug(f'Отправлено сообщение: {message.strip()}')
-    writer.close()
-    await writer.wait_closed()
-    
+    log.debug(f'Отправлено сообщение: {message.strip()}')    
 
 
 def main():
@@ -140,7 +145,7 @@ def main():
             return
 
     if token:
-        asyncio.run(authorize(host, port, token))
+        asyncio.run(authorise(host, port, token))
     else:
         asyncio.run(register(host, port, username))
 
