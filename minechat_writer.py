@@ -11,7 +11,7 @@ from environs import Env
 log = logging.getLogger(__file__)
 
 
-async def register(host, port, username):
+async def register(host, port, username, message):
     reader, writer = await asyncio.open_connection(host, port)
 
     signin_message = (await reader.readline()).decode().strip()
@@ -32,17 +32,21 @@ async def register(host, port, username):
     signup_result = json.loads((await reader.readline()).decode())
 
     log.debug(f"Сообщение: {signup_result}")
-    print(f"Зарегистрирован пользователь {signup_result['nickname']}. Вот ваш токен:")
+    print(f"Зарегестрирован пользователь {signup_result['nickname']}. Вот ваш токен:")
     print(signup_result['account_hash'])
 
     async with aiofiles.open('token.txt', 'w') as token_file:
         await token_file.write(signup_result['account_hash'])
         print("Токен сохранён в файл token.txt")
 
-    return writer
+    writer.close()
+    await writer.wait_closed()
+
+    await authorise(host, port, signup_result['account_hash'], message)
 
 
-async def authorise(host, port, token):
+async def authorise(host, port, token, message):
+    print('1')
     reader, writer = await asyncio.open_connection(
         host,
         port
@@ -63,8 +67,6 @@ async def authorise(host, port, token):
         return
     
     log.debug(f"Logged in as {auth_result['nickname']}")
-        
-    message = 'Я снова тестирую чатик. Это третье сообщение.'
     
     await submit_message(writer, message)
     writer.close()
@@ -72,8 +74,6 @@ async def authorise(host, port, token):
 
 
 async def submit_message(writer, message):
-    message = 'Я снова тестирую чатик. Это третье сообщение.'
-    
     if not message:
         message = '\n'
     else:
@@ -102,6 +102,12 @@ def main():
     parser.add_argument(
         '--user',
         help='Токен пользователя для входа или имя для регистрации'
+    )
+
+    parser.add_argument(
+        '--message',
+        required=True,
+        help='Сообщение в чат'
     )
     
     args = parser.parse_args()
@@ -144,10 +150,12 @@ def main():
             log.debug(dedent(text))
             return
 
+    message = args.message
+
     if token:
-        asyncio.run(authorise(host, port, token))
+        asyncio.run(authorise(host, port, token, message))
     else:
-        asyncio.run(register(host, port, username))
+        asyncio.run(register(host, port, username, message))
 
 if __name__ == '__main__':
     main()
